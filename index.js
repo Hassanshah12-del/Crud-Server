@@ -213,8 +213,3 @@ app.post("/createUser", upload.single('image'), (req, res) => {
         .catch(err => res.status(500).json({ error: "Server error" }));
 });
 
-// Start the server
-const PORT = process.env.PORT || 3002;
-app.listen(PORT, () => {
-    console.log(`Server Running in ${process.env.DEV_MODE} on port ${PORT}`.bgCyan.white);
-});
