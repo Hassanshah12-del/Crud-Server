@@ -15,6 +15,7 @@ const path = require('path');
 const axios = require('axios');
 const UserModel = require('./models/Users');
 const RegisterModel = require('./models/Registers');
+const serverless = require('serverless-http');
 
 // Initialize the app and load environment variables
 dotenv.config();
@@ -24,11 +25,40 @@ const app = express();
 app.use('/uploads', express.static('uploads'));
 
 // CORS configuration
-app.use(cors({
-    origin: ["https://crud-client-five.vercel.app"],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true
-}));
+const corsOptions = {
+    origin: 'https://crud-client-five.vercel.app', // Your client-side URL
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    credentials: true, // Allows cookies and other credentials to be sent
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions)); // Apply CORS middleware
+
+const allowCors = fn => async (req, res) => {
+  res.setHeader('Access-Control-Allow-Credentials', true)
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  // another common pattern
+  // res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT')
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  )
+  if (req.method === 'OPTIONS') {
+    res.status(200).end()
+    return
+  }
+  return await fn(req, res)
+}
+
+const handler = (req, res) => {
+  const d = new Date()
+  res.end(d.toString())
+}
+
+module.exports = allowCors(handler)
+
 
 // Middlewares
 app.use(express.json());
@@ -213,8 +243,4 @@ app.post("/createUser", upload.single('image'), (req, res) => {
         .catch(err => res.status(500).json({ error: "Server error" }));
 });
 
-// Start the server
-const PORT = process.env.PORT || 3002;
-app.listen(PORT, () => {
-    console.log(`Server Running in ${process.env.DEV_MODE} on port ${PORT}`.bgCyan.white);
-});
+module.exports = app;
