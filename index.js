@@ -93,7 +93,7 @@ app.post('/api/chatbot', async (req, res) => {
         }, {
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${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}`
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
             }
         });
 
