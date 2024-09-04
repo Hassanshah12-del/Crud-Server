@@ -18,7 +18,7 @@ const RegisterModel = require('./models/Registers');
 const serverless = require('serverless-http');
 
 // Initialize the app and load environment variables
-dotenv.config();
+dotenv.config({path:"./config/.env"})
 const app = express();
 
 // Static files route
