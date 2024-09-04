@@ -9,9 +9,6 @@ const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
-const multer = require('multer');
-const fs = require('fs');
-const path = require('path');
 const axios = require('axios');
 const UserModel = require('./models/Users');
 const RegisterModel = require('./models/Registers');
@@ -20,9 +17,6 @@ const serverless = require('serverless-http');
 // Initialize the app and load environment variables
 dotenv.config({path:"./config/.env"})
 const app = express();
-
-// Static files route
-app.use('/uploads', express.static('uploads'));
 
 // CORS configuration
 const corsOptions = {
@@ -38,8 +32,6 @@ app.use(cors(corsOptions)); // Apply CORS middleware
 const allowCors = fn => async (req, res) => {
   res.setHeader('Access-Control-Allow-Credentials', true)
   res.setHeader('Access-Control-Allow-Origin', '*')
-  // another common pattern
-  // res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT')
   res.setHeader(
     'Access-Control-Allow-Headers',
@@ -59,23 +51,11 @@ const handler = (req, res) => {
 
 module.exports = allowCors(handler)
 
-
 // Middlewares
 app.use(express.json());
 app.use(morgan('dev'));
 app.use(cookieParser());
 app.use(bodyParser.json());
-
-// Multer setup for image uploads
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/'); // Directory to save images
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname)); // Save files with unique names
-    }
-});
-const upload = multer({ storage: storage });
 
 // MongoDB connection
 mongoose.connect("mongodb+srv://hassan:hassan123@cluster0.ky71w.mongodb.net/crud?retryWrites=true&w=majority&appName=Cluster0")
@@ -173,29 +153,17 @@ app.get("/getUser/:id", (req, res) => {
         .catch(err => res.status(500).json(err));
 });
 
-app.put("/updateUser/:id", upload.single('image'), async (req, res) => {
+app.put("/updateUser/:id", async (req, res) => {
     const id = req.params.id;
     const { name, email, age } = req.body;
-    const newImage = req.file ? `uploads/${req.file.filename}` : null;
 
     try {
         const user = await UserModel.findById(id);
 
         if (user) {
-            if (newImage && user.image) {
-                const oldImagePath = path.join(__dirname, user.image);
-                fs.unlink(oldImagePath, (err) => {
-                    if (err) {
-                        console.error("Error deleting old image:", err);
-                    } else {
-                        console.log("Old image deleted successfully.");
-                    }
-                });
-            }
-
             const updatedUser = await UserModel.findByIdAndUpdate(
                 id,
-                { name, email, age, image: newImage || user.image },
+                { name, email, age },
                 { new: true }
             );
             res.json(updatedUser);
@@ -211,34 +179,21 @@ app.delete("/deleteUser/:id", async (req, res) => {
     const id = req.params.id;
 
     try {
-        const user = await UserModel.findById(id);
-
-        if (user && user.image) {
-            const imagePath = path.join(__dirname, user.image);
-
-            fs.unlink(imagePath, (err) => {
-                if (err) {
-                    console.error("Error deleting image:", err);
-                } else {
-                    console.log("Image deleted successfully.");
-                }
-            });
-
-            await UserModel.findByIdAndDelete(id);
+        const user = await UserModel.findByIdAndDelete(id);
+        if (user) {
             res.json({ success: true });
         } else {
-            res.status(404).json({ error: "User not found or no image to delete" });
+            res.status(404).json({ error: "User not found" });
         }
     } catch (err) {
         res.status(500).json({ error: "Server error" });
     }
 });
 
-app.post("/createUser", upload.single('image'), (req, res) => {
+app.post("/createUser", (req, res) => {
     const { name, email, age } = req.body;
-    const image = req.file ? `uploads/${req.file.filename}` : null;
 
-    UserModel.create({ name, email, age, image })
+    UserModel.create({ name, email, age })
         .then(user => res.json(user))
         .catch(err => res.status(500).json({ error: "Server error" }));
 });
